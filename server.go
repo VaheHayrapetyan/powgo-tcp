@@ -1,4 +1,4 @@
-package gopow_tcp
+package powgo_tcp
 
 import (
 	"fmt"
