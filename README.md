@@ -1,77 +1,56 @@
-# powgo
+# powgo-tcp
 
-Hello. Here you will get acquainted with the powgo library. A library based on the idea of Proof of work (PoW).     
-Proof of work (PoW) is a form of cryptographic proof in which one party (the prover) proves to others (the verifiers) that a certain amount of a specific computational effort has been expended. Verifiers can subsequently confirm this expenditure with minimal effort on their part.
+Hello. Here you will get acquainted with the powgo-tcp library. It is a client-server system protected by Proof of work (PoW) authorization with a challenge-response protocol and running on TCP.
+
+Remark:
+This library uses the github.com/VaheHayrapetyan/powgo library, specifically the powgo.NewChallenge, powgo.Solve, powgo.Verify functions to create a challenge, solve a challenge, and verify a proof.
 
 Functions:
 
-    func NewChallenge(difficulty uint32, nonce []byte) (challenge []byte)
-    func Solve(challenge []byte, data []byte) (proof []byte, err error)
-	func Verify(challenge []byte, proof []byte, data []byte) (ok bool, err error)
+    func PowServer(host string, difficulty uint32, serverData []byte, getResponse func() string) error
+    func PowClient(host string, serverData []byte) (string, error)
 
-Structures:
+Types:
 
-    type Algorithm string
-    
+    type Conn struct {
+        id         uint64
+        connection net.Conn
+    }
+
+    type Command uint8
+
     const (
-        Sha111 Algorithm = "sha111"
+        PingC = iota
+        ChallengeC
+        ProofC
+        PongC
+        ErrorC
     )
 
-    type Challenge struct {
-        Alg        Algorithm // The requested algorithm
-        Difficulty uint32    // The requested difficulty
-        Nonce      []byte    // Nonce to diversify the challenge
-    }
+Now let's start from the beginning․
 
-    type Proof struct {
-        buf []byte
-    }
+    func PowServer(host string, difficulty uint32, serverData []byte, getResponse func() string) error
 
-Now let's start from the beginning․     
-In order for the provers to prove that they are worthy of something, it is necessary to challenge them, for which they will be rewarded.
+The PowServer function gets host, difficulty, serverData, getResponse. Host is a server host. Difficulty is the degree of complexity that determined how difficult it will be for a prover (client) to find the answer to a given challenge. The data is a server (verifier) standard information known to the client (prover). It is used to solving and verifying a challenge. getResponse is a function that returns a string value that is the final response returned to the client.
 
-    func NewChallenge(difficulty uint32, nonce []byte) (challenge []byte)
+    func PowClient(host string, serverData []byte) (string, error)
 
-The NewChallenge function creates and returns this challenge. Difficulty and nonce parameters are passed into the function to add some complexity and diversify. Difficulty is the degree of complexity that determined how difficult it will be for a prover to find the answer to a given challenge. Nonce is information that is sent to the client (prover) each time a challenge is presented. Through it, the challenges are different from each other.
+The PowClient function gets a host, which is the server host, data that is defined in the same way as it was defined for the PowServer function.
 
-    func Solve(challenge []byte, data []byte) (proof []byte, err error)
+As you can see, in the types section, there is a Command type and five types of commands:
+0. PingC
+1. ChallengeC
+2. ProofC
+3. PongC
+4. ErrorC
 
-The Solve function solves the challenge and returns the answer as proof. Challenge and data parameters are passed to the function. Data is a server (verifier) standard information known to the client (verifier). It is used to solving and verifying a challenge. The function returns an error, for example, when the challenge has an invalid structure or when the algorithm type is not equal to Sha111.     
+Describe the progress of the program։
+0. the client connects to the server, then sends it the PingC command,
+1. the server receives the PingC command and creates a challenge via the powgo.NewChallenge function and sends it to the client along with the ChallengeC command,
+2. upon receiving a challenge, the client solves it using the powgo.Solve function, obtains a proof, and sends it to the server along with the ProofC command,
+3. the server receives the proof and verifies it using the powgo.Verify function: when the powgo.Verify function returns true, the server sends the expected response to the client along with the PongC command,
+4. when the powgo.Verify function is returned false, the server sends an error message to the client along with the ErrorC command․
 
-    func Verify(challenge []byte, proof []byte, data []byte) (ok bool, err error)
-
-The Verify function checks the solution against the Sha111 algorithm, returns true if the correct solution was sent, and false otherwise. The function takes as parameters the challenge, the proof of the given challenge, and the data which is the same data we passed to the Solve function. The function returns an error, for example, when the challenge has an invalid structure or when the algorithm type is not equal to Sha111.         
-
-    //example of using a powgo library
-
-    import (
-        "fmt"
-        pow "github.com/VaheHayrapetyan/powgo"
-    )
-    
-    func main() {
-        //create a proof of work challenge with difficulty 30
-        challenge := pow.NewChallenge(30, []byte("some random nonce"))
-        fmt.Printf("challenge: %s\n", challenge)
-    
-        // solve the proof of work
-        proof, err := pow.Solve(challenge, []byte("some server data"))
-        if err != nil {
-            panic(err)
-        }
-        fmt.Printf("proof: %s\n", proof)
-    
-        // verify if the proof is correct
-        ok, err := pow.Verify(challenge, proof, []byte("some server data"))
-        if err != nil {
-            panic(err)
-        }
-        fmt.Printf("verify: %v", ok)
-    }
-
-        // Output:
-        //		challenge:  sha2bday-5-c29tZSByYW5kb20gbm9uY2U
-        //		proof:      AAAAAAAGZZ8AAAAAAA4LyQAAAAAADyI4
-        //		check:      true
+Our library is based on TCP. Therefore, we created a communication protocol that looks like this: 1 byte command, 4 bytes messageLength of type int, a message whose length is equal to messageLength.
 
 That's all !!! Thank you for your attention.
