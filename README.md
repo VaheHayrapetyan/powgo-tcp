@@ -53,4 +53,37 @@ Describe the progress of the program։
 
 Our library is based on TCP. Therefore, we created a communication protocol that looks like this: 1 byte command, 4 bytes messageLength of type int, a message whose length is equal to messageLength.
 
+    //examples
+
+Client example:
+
+    //client, which connect to server and solve the challenge
+    response, err := powgo_tcp.PowClient("127.0.0.1:8080",  []byte("some server data"))
+	if err != nil {
+        panic(err)
+	} else {
+        fmt.Println(response)
+	}
+
+Server example:
+
+    // server that sends a challenge to the client and verifies the proof of the challenge sent by the client	
+    err := powgo_tcp.PowServer("127.0.0.1:8080", 30, []byte("some server data"), randomResponse)
+	if err != nil {
+        panic(err)
+	}
+
+    //function that returns a string value that is the final response returned to the client
+    func randomResponse() string {
+        responses := [3]string{"response_1", "response_2", "response_3"}
+        max := len(responses)
+        u := time.Now().UnixNano()
+        source := rand.NewSource(u)
+        r := rand.New(source)
+    
+        i := r.Intn(max)
+        return responses[i]
+    }
+
+
 That's all !!! Thank you for your attention.
